@@ -1,0 +1,28 @@
+[project]
+name = "arc-agent-registry"
+version = "0.1.0"
+description = "ERC-8004 aligned agent identity + reputation on Circle's Arc. The trust layer for x402 agent commerce."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "httpx>=0.27",
+    "eth-account>=0.13.0",
+    "eth-abi>=5.0",
+    "eth-utils>=4.0",
+    "mcp[cli]>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["registry"]

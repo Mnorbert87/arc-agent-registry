@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arc Agent Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070a12;          /* deep institutional navy-black */
+    --bg-2: #0b1020;
+    --ink: #eef2f8;
+    --muted: #8b97ad;
+    --faint: #566074;
+    --line: rgba(255,255,255,0.07);
+    --line-2: rgba(122,170,255,0.18);
+    --glass: rgba(255,255,255,0.025);
+    --glass-2: rgba(255,255,255,0.05);
+    --c1: #4da2ff;          /* Arc blue */
+    --c2: #56cfe1;          /* cyan */
+    --c3: #2f6bff;          /* deep blue */
+    --good: #4fd6a8;
+    --bad: #ff7a7a;
+    --warn: #ffc266;
+    --r: 14px;
+    font-synthesis: none;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink); background: var(--bg);
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.55;
+    overflow-x: hidden;
+  }
+  /* institutional background: fine grid rails + single restrained blue glow */
+  .aurora { position: fixed; inset: 0; z-index: -2; overflow: hidden;
+    background:
+      radial-gradient(900px 520px at 50% -8%, rgba(77,162,255,0.16), transparent 60%),
+      radial-gradient(700px 500px at 90% 110%, rgba(47,107,255,0.12), transparent 60%),
+      var(--bg); }
+  .aurora::before { content: ""; position: absolute; width: 560px; height: 560px;
+    left: 50%; top: -120px; transform: translateX(-50%); border-radius: 50%;
+    background: radial-gradient(circle, rgba(86,207,225,0.22), transparent 62%);
+    filter: blur(70px); animation: pulse 14s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ opacity: 0.55; transform: translateX(-50%) scale(1);} 50%{ opacity: 0.85; transform: translateX(-50%) scale(1.12);} }
+  .grain { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+    background-image:
+      linear-gradient(rgba(122,170,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(122,170,255,0.05) 1px, transparent 1px);
+    background-size: 54px 54px; background-position: center;
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+    mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 78%); }
+
+  header {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 30px; border-bottom: 1px solid var(--line);
+    background: rgba(5,7,15,0.55); backdrop-filter: blur(18px) saturate(140%);
+  }
+  .brand { display: flex; align-items: center; gap: 13px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 11px; position: relative;
+    background: linear-gradient(135deg, var(--c1), var(--c2)); display: grid; place-items: center;
+    box-shadow: 0 8px 24px rgba(91,140,255,0.45), inset 0 0 0 1px rgba(255,255,255,0.2);
+  }
+  .logo svg { width: 20px; height: 20px; }
+  .brand h1 { font-family: "Space Grotesk"; font-size: 17px; margin: 0; letter-spacing: -0.2px; font-weight: 600; }
+  .brand small { color: var(--muted); font-size: 11.5px; }
+  .net-badge {
+    font-size: 11px; color: var(--c2); display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line-2); border-radius: 999px; padding: 5px 11px; background: var(--glass);
+  }
+  .net-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); box-shadow: 0 0 8px currentColor; }
+  .net-badge.ok { color: var(--good); } .net-badge.ok .dot { background: var(--good); }
+  .net-badge.bad { color: var(--bad); } .net-badge.bad .dot { background: var(--bad); }
+
+  button {
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 12px;
+    border: 1px solid var(--line-2); background: var(--glass-2); color: var(--ink);
+    padding: 10px 16px; transition: 0.18s ease;
+  }
+  button:hover { border-color: rgba(91,140,255,0.6); transform: translateY(-1px); }
+  button.primary {
+    border: none; color: #04111f; position: relative;
+    background: linear-gradient(135deg, var(--c2), var(--c1));
+    box-shadow: 0 10px 26px rgba(54,224,192,0.32);
+  }
+  button.primary:hover { filter: brightness(1.06); box-shadow: 0 12px 30px rgba(54,224,192,0.4); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 40px 22px 90px; }
+
+  .hero { text-align: center; margin: 8px 0 34px; }
+  .hero .eyebrow {
+    display: inline-block; font-size: 11.5px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--c2); border: 1px solid var(--line-2); border-radius: 999px; padding: 6px 14px;
+    background: var(--glass); margin-bottom: 18px;
+  }
+  .hero h2 {
+    font-family: "Space Grotesk"; font-weight: 700; font-size: clamp(30px, 5vw, 50px);
+    line-height: 1.05; margin: 0 0 14px; letter-spacing: -1.4px;
+    background: linear-gradient(120deg, #fff 20%, var(--c2) 55%, var(--c1) 90%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero p { color: var(--muted); max-width: 560px; margin: 0 auto; font-size: 15px; }
+
+  .tabs { display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--glass); margin: 0 auto 26px; }
+  .tabs-wrap { display: flex; justify-content: center; }
+  .tab { padding: 9px 18px; border-radius: 999px; background: transparent; border: none;
+    color: var(--muted); font-weight: 600; font-size: 14px; }
+  .tab:hover { transform: none; color: var(--ink); }
+  .tab.active { color: #04111f; background: linear-gradient(135deg, var(--c2), var(--c1));
+    box-shadow: 0 6px 18px rgba(54,224,192,0.3); }
+
+  .panel {
+    background: var(--glass); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 24px; margin-bottom: 18px;
+    backdrop-filter: blur(8px); position: relative; overflow: hidden;
+  }
+  .panel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-2), transparent); }
+  .panel h3 { font-family: "Space Grotesk"; margin: 0 0 6px; font-size: 19px; font-weight: 600; letter-spacing: -0.3px; }
+  .panel .hint { color: var(--muted); margin: 0 0 18px; font-size: 13.5px; }
+  .panel .hint code { color: var(--c2); background: var(--glass-2); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; letter-spacing: 0.2px; }
+  input, textarea, select {
+    width: 100%; font: inherit; color: var(--ink);
+    background: rgba(0,0,0,0.25); border: 1px solid var(--line-2);
+    border-radius: 12px; padding: 12px 14px; outline: none; transition: 0.15s;
+  }
+  input::placeholder, textarea::placeholder { color: var(--faint); }
+  input:focus, textarea:focus, select:focus { border-color: var(--c1); box-shadow: 0 0 0 3px rgba(91,140,255,0.15); }
+  textarea { resize: vertical; min-height: 76px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 190px; }
+
+  .dir-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .dir-head h3 { font-family: "Space Grotesk"; margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+  .count-pill { font-size: 12px; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--line-2);
+    color: var(--c2); background: var(--glass); font-family: "Inter"; font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--glass); border: 1px solid var(--line); border-radius: var(--r);
+    padding: 18px; cursor: pointer; transition: 0.2s ease; position: relative; overflow: hidden;
+    display: flex; gap: 16px; align-items: center;
+  }
+  .card::after { content: ""; position: absolute; inset: 0; border-radius: var(--r); padding: 1px;
+    background: linear-gradient(135deg, transparent, var(--c1), var(--c2)); opacity: 0;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; transition: 0.2s; }
+  .card:hover { transform: translateY(-3px); }
+  .card:hover::after { opacity: 0.8; }
+  .ring { --p: 0; width: 66px; height: 66px; flex: 0 0 66px; border-radius: 50%;
+    background: conic-gradient(var(--c2) calc(var(--p)*1%), rgba(255,255,255,0.07) 0);
+    display: grid; place-items: center; transition: 0.3s; }
+  .ring-inner { width: 52px; height: 52px; border-radius: 50%; background: var(--bg-2);
+    display: grid; place-items: center; line-height: 1; }
+  .ring-inner b { font-family: "Space Grotesk"; font-size: 17px; }
+  .ring-inner small { font-size: 9px; color: var(--faint); }
+  .card .meta { min-width: 0; flex: 1; }
+  .card .id { font-family: "Space Grotesk"; font-size: 12px; color: var(--c2); font-weight: 600; letter-spacing: 0.5px; }
+  .card .uri { font-size: 13px; margin: 4px 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .owner { font-size: 11px; color: var(--faint); font-family: ui-monospace, monospace; }
+  .card .rev { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 0; font-size: 14px; }
+  .empty svg { opacity: 0.4; margin-bottom: 12px; }
+
+  .settings-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    font-size: 12px; color: var(--muted); justify-content: center; margin-bottom: 8px; }
+  .settings-bar .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--glass); }
+  .settings-bar code { color: var(--c2); font-family: ui-monospace, monospace; }
+  .settings-bar button { padding: 5px 12px; font-size: 12px; }
+
+  .out { background: rgba(0,0,0,0.32); border: 1px solid var(--line-2); border-radius: 12px;
+    padding: 13px; font-family: ui-monospace, monospace; font-size: 11.5px; word-break: break-all;
+    white-space: pre-wrap; margin-top: 14px; color: var(--c2); }
+
+  .seg { display: flex; gap: 6px; margin-bottom: 16px; background: var(--glass);
+    border: 1px solid var(--line); border-radius: 14px; padding: 5px; }
+  .seg button { flex: 1; background: transparent; border: none; color: var(--muted); }
+  .seg button:hover { transform: none; color: var(--ink); }
+  .seg button.active { color: #04111f; background: linear-gradient(135deg, var(--c2), var(--c1)); }
+
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .kv span:first-child { color: var(--muted); }
+  .kv span:last-child { font-family: ui-monospace, monospace; word-break: break-all; text-align: right; }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(3,5,12,0.72); backdrop-filter: blur(6px);
+    display: none; place-items: center; z-index: 40; padding: 20px; }
+  .modal-bg.show { display: grid; }
+  .modal { background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r);
+    padding: 26px; max-width: 540px; width: 100%; max-height: 86vh; overflow: auto;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+  .modal h3 { font-family: "Space Grotesk"; margin: 0 0 14px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #0c1120; border: 1px solid var(--line-2); padding: 13px 20px; border-radius: 14px;
+    font-size: 13px; z-index: 50; max-width: 90vw; box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+    opacity: 0; pointer-events: none; transition: 0.25s; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.good { border-color: rgba(54,224,160,0.6); } .toast.bad { border-color: rgba(255,122,122,0.6); }
+
+  footer { text-align: center; color: var(--faint); font-size: 12px; padding: 24px; }
+  footer a { color: var(--muted); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+<div class="grain"></div>
+
+<header>
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2L3 20h4l5-10 5 10h4L12 2z" fill="#04111f"/></svg></div>
+    <div>
+      <h1>Arc Agent Registry</h1>
+      <small>ERC-8004 identity &amp; reputation</small>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <span id="netBadge" class="net-badge"><span class="dot"></span>not connected</span>
+    <button id="connectBtn" class="primary">Connect Wallet</button>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <span class="eyebrow">On Arc Testnet · ERC-8004</span>
+    <h2>Identity &amp; trust<br>for autonomous agents</h2>
+    <p>Register your agent on-chain, build verifiable reputation, and pair it with x402 payments — a portable trust layer for machine-to-machine commerce.</p>
+  </div>
+
+  <div class="settings-bar" id="settingsBar">
+    <span class="chip">Identity <code id="idAddrLabel">—</code></span>
+    <span class="chip">Reputation <code id="repAddrLabel">—</code></span>
+    <button id="editAddrBtn">Set addresses</button>
+  </div>
+
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <button class="tab active" data-tab="directory">Directory</button>
+      <button class="tab" data-tab="register">Register</button>
+      <button class="tab" data-tab="reputation">Reputation</button>
+      <button class="tab" data-tab="about">How it works</button>
+    </div>
+  </div>
+
+  <!-- DIRECTORY -->
+  <section id="tab-directory">
+    <div class="dir-head">
+      <h3>Registered agents <span class="count-pill" id="countPill">0</span></h3>
+      <button id="refreshBtn">↻ Refresh</button>
+    </div>
+    <div class="grid" id="agentGrid"></div>
+    <div class="empty" id="dirEmpty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <div id="dirEmptyText">Set the contract addresses to load the directory.</div>
+    </div>
+  </section>
+
+  <!-- REGISTER -->
+  <section id="tab-register" style="display:none;">
+    <div class="panel">
+      <h3>Register your agent</h3>
+      <p class="hint">Mints an ERC-8004 identity (ERC-721) owned by your wallet. Point it at your <strong>agent card</strong> — a JSON document served at <code>https://&lt;domain&gt;/.well-known/agent-card.json</code> describing your endpoints, capabilities, and x402 payment details.</p>
+      <label>Agent card URI</label>
+      <input id="regUri" placeholder="https://my-agent.example/.well-known/agent-card.json" />
+      <div style="margin-top:18px;"><button class="primary" id="regBtn">Register on-chain</button></div>
+      <div class="out" id="regOut" style="display:none;"></div>
+    </div>
+  </section>
+
+  <!-- REPUTATION -->
+  <section id="tab-reputation" style="display:none;">
+    <div class="seg">
+      <button class="active" data-rep="auth">1 · Authorize a reviewer</button>
+      <button data-rep="submit">2 · Submit feedback</button>
+    </div>
+
+    <div class="panel" id="rep-auth">
+      <h3>Authorize a reviewer</h3>
+      <p class="hint">As the agent owner, sign a single-use EIP-712 <strong>FeedbackAuth</strong> granting one client the right to leave one review. No transaction, no gas — just a signature. Send the generated blob to the reviewer.</p>
+      <div class="row">
+        <div><label>Agent ID</label><input id="authAgentId" type="number" min="1" placeholder="1" /></div>
+        <div><label>Reviewer (client) address</label><input id="authClient" placeholder="0x…" /></div>
+      </div>
+      <label>Auth valid for</label>
+      <select id="authExpiry">
+        <option value="3600">1 hour</option>
+        <option value="86400" selected>1 day</option>
+        <option value="604800">1 week</option>
+      </select>
+      <div style="margin-top:18px;"><button class="primary" id="authBtn">Sign FeedbackAuth</button></div>
+      <div class="out" id="authOut" style="display:none;"></div>
+    </div>
+
+    <div class="panel" id="rep-submit" style="display:none;">
+      <h3>Submit feedback</h3>
+      <p class="hint">Paste the FeedbackAuth blob the agent owner gave you, set a score, and submit on-chain. Your wallet must be the <em>client</em> address named in the auth.</p>
+      <label>FeedbackAuth blob (JSON)</label>
+      <textarea id="subBlob" placeholder='{"agentId":1,"client":"0x…","expiry":…,"nonce":"0x…","signature":"0x…"}'></textarea>
+      <div class="row">
+        <div><label>Score (0–100)</label><input id="subScore" type="number" min="0" max="100" value="90" /></div>
+        <div><label>Tag (optional, ≤31 chars)</label><input id="subTag" placeholder="memory-search" /></div>
+      </div>
+      <label>Detailed review URI (optional)</label>
+      <input id="subFileUri" placeholder="https://… or leave empty" />
+      <div style="margin-top:18px;"><button class="primary" id="subBtn">Submit feedback on-chain</button></div>
+      <div class="out" id="subOut" style="display:none;"></div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="tab-about" style="display:none;">
+    <div class="panel">
+      <h3>How it works</h3>
+      <p class="hint" style="font-size:14px; line-height:1.75;">
+        <strong>Identity</strong> — each agent is an ERC-721 token. <code>register(cardURI)</code> mints it to your wallet; ownership of the token <em>is</em> ownership of the identity.<br><br>
+        <strong>Reputation</strong> — feedback is gated to stop fake reviews. The agent owner signs an off-chain EIP-712 <code>FeedbackAuth</code> naming one client + a single-use nonce; the client submits <code>giveFeedback</code> and the contract verifies the signature on-chain. Averages are kept as an O(1) aggregate.<br><br>
+        <strong>x402 pairing</strong> — after a paid agent call, the seller hands the buyer a FeedbackAuth, and the buyer rates the seller. Reputation becomes the trust layer over machine-to-machine payments.
+      </p>
+      <div class="kv"><span>Network</span><span>Arc Testnet · chainId 5042002</span></div>
+      <div class="kv"><span>RPC</span><span>https://rpc.testnet.arc.network</span></div>
+      <div class="kv"><span>Gas token</span><span>USDC (Arc faucet)</span></div>
+    </div>
+  </section>
+</main>
+
+<footer>Arc Agent Registry · open ERC-8004 stack · runs fully client-side</footer>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal-bg" id="addrModalBg"><div class="modal">
+  <h3>Contract addresses</h3>
+  <p class="hint">Paste the deployed addresses (from the Deploy script output). Stored in your browser only.</p>
+  <label>IdentityRegistry</label><input id="setIdAddr" placeholder="0x…" />
+  <label>ReputationRegistry</label><input id="setRepAddr" placeholder="0x…" />
+  <div style="margin-top:18px; display:flex; gap:10px;">
+    <button class="primary" id="saveAddrBtn">Save</button>
+    <button id="closeAddrBtn">Cancel</button>
+  </div>
+</div></div>
+
+<script type="module">
+import { ethers } from "https://esm.sh/ethers@6.13.4";
+
+const CHAIN_ID = 5042002;
+const CHAIN_HEX = "0x" + CHAIN_ID.toString(16);
+const RPC_URL = "https://rpc.testnet.arc.network";
+
+// Deployed on Arc testnet (2026-06-08, deployer 0x2e36…A08a).
+// ReputationRegistry redeployed 2026-06-08 after the self-feedback fix (v2).
+const IDENTITY_ADDR = "0x899E0679F011643C3A4480cd77913B7871eaC8dB";
+const REPUTATION_ADDR = "0x1b647F2B25957e8eDD828C55e37b4777Aa15aed0";
+const JOB_ESCROW_ADDR = "0x2c3EC2158312AC1D494044501E9A52aAABb07a43";
+
+const IDENTITY_ABI = [
+  "function register(string tokenURI_) returns (uint256)",
+  "function agentCount() view returns (uint256)",
+  "function ownerOf(uint256) view returns (address)",
+  "function tokenURI(uint256) view returns (string)",
+];
+const REPUTATION_ABI = [
+  "function giveFeedback(uint256 agentId,uint8 score,bytes32 tag,string fileURI,uint64 expiry,bytes32 nonce,bytes signature)",
+  "function getSummary(uint256) view returns (uint64 n,uint256 sum,uint256 average)",
+  "function lastFeedback(uint256) view returns (address client,uint8 score,bytes32 tag,uint64 timestamp,string fileURI)",
+];
+
+let provider, signer, account, addrs;
+
+function loadAddrs() {
+  addrs = {
+    identity: localStorage.getItem("arc_id_addr") || IDENTITY_ADDR,
+    reputation: localStorage.getItem("arc_rep_addr") || REPUTATION_ADDR,
+  };
+  document.getElementById("idAddrLabel").textContent = addrs.identity ? short(addrs.identity) : "not set";
+  document.getElementById("repAddrLabel").textContent = addrs.reputation ? short(addrs.reputation) : "not set";
+}
+function short(a) { return a.slice(0, 6) + "…" + a.slice(-4); }
+function readProvider() { return new ethers.JsonRpcProvider(RPC_URL, CHAIN_ID); }
+
+function toast(msg, kind = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "toast show " + kind;
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = "toast", 4500);
+}
+
+// ---------- wallet ----------
+document.getElementById("connectBtn").onclick = connect;
+async function connect() {
+  if (!window.ethereum) { toast("No EVM wallet found (install MetaMask).", "bad"); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    await ensureNetwork();
+    signer = await provider.getSigner();
+    account = await signer.getAddress();
+    document.getElementById("connectBtn").textContent = short(account);
+    setNet(true);
+    toast("Connected: " + short(account), "good");
+  } catch (e) { toast(err(e), "bad"); }
+}
+async function ensureNetwork() {
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] });
+  } catch (e) {
+    if (e.code === 4902 || (e.data && e.data.originalError && e.data.originalError.code === 4902)) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: CHAIN_HEX, chainName: "Arc Testnet",
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+          rpcUrls: [RPC_URL],
+        }],
+      });
+    } else throw e;
+  }
+}
+function setNet(ok) {
+  const b = document.getElementById("netBadge");
+  b.innerHTML = '<span class="dot"></span>' + (ok ? "Arc Testnet" : "wrong network");
+  b.className = "net-badge " + (ok ? "ok" : "bad");
+}
+if (window.ethereum) {
+  window.ethereum.on?.("accountsChanged", () => location.reload());
+  window.ethereum.on?.("chainChanged", () => location.reload());
+}
+
+// ---------- tabs ----------
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  ["directory", "register", "reputation", "about"].forEach(n =>
+    document.getElementById("tab-" + n).style.display = n === t.dataset.tab ? "" : "none");
+  if (t.dataset.tab === "directory") loadDirectory();
+});
+document.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-rep]").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById("rep-auth").style.display = b.dataset.rep === "auth" ? "" : "none";
+  document.getElementById("rep-submit").style.display = b.dataset.rep === "submit" ? "" : "none";
+});
+
+// ---------- address settings ----------
+document.getElementById("editAddrBtn").onclick = () => {
+  document.getElementById("setIdAddr").value = addrs.identity;
+  document.getElementById("setRepAddr").value = addrs.reputation;
+  document.getElementById("addrModalBg").classList.add("show");
+};
+document.getElementById("closeAddrBtn").onclick = () => document.getElementById("addrModalBg").classList.remove("show");
+document.getElementById("saveAddrBtn").onclick = () => {
+  const id = document.getElementById("setIdAddr").value.trim();
+  const rep = document.getElementById("setRepAddr").value.trim();
+  if (id && !ethers.isAddress(id)) return toast("Invalid identity address", "bad");
+  if (rep && !ethers.isAddress(rep)) return toast("Invalid reputation address", "bad");
+  localStorage.setItem("arc_id_addr", id); localStorage.setItem("arc_rep_addr", rep);
+  loadAddrs(); document.getElementById("addrModalBg").classList.remove("show");
+  toast("Addresses saved", "good"); loadDirectory();
+};
+
+// ---------- directory ----------
+document.getElementById("refreshBtn").onclick = loadDirectory;
+async function loadDirectory() {
+  const grid = document.getElementById("agentGrid");
+  const empty = document.getElementById("dirEmpty");
+  const emptyText = document.getElementById("dirEmptyText");
+  grid.innerHTML = ""; empty.style.display = "none";
+  if (!addrs.identity || !addrs.reputation) { empty.style.display = "block"; emptyText.textContent = "Set the contract addresses to load the directory."; return; }
+  try {
+    const p = readProvider();
+    const id = new ethers.Contract(addrs.identity, IDENTITY_ABI, p);
+    const rep = new ethers.Contract(addrs.reputation, REPUTATION_ABI, p);
+    const count = Number(await id.agentCount());
+    document.getElementById("countPill").textContent = count;
+    if (count === 0) { empty.style.display = "block"; emptyText.textContent = "No agents registered yet. Be the first."; return; }
+    for (let i = 1; i <= count; i++) {
+      const [owner, uri, summary] = await Promise.all([
+        id.ownerOf(i).catch(() => "—"),
+        id.tokenURI(i).catch(() => ""),
+        rep.getSummary(i).catch(() => [0n, 0n, 0n]),
+      ]);
+      grid.appendChild(agentCard(i, owner, uri, summary));
+    }
+  } catch (e) { empty.style.display = "block"; emptyText.textContent = "Could not reach the registry: " + err(e); }
+}
+function agentCard(idNum, owner, uri, summary) {
+  const n = Number(summary[0]), avg = Number(summary[2]);
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML = `
+    <div class="ring" style="--p:${avg}"><div class="ring-inner"><b>${avg}</b><small>/100</small></div></div>
+    <div class="meta">
+      <div class="id">AGENT #${idNum}</div>
+      <div class="uri">${uri ? escapeHtml(uri) : "<span style='color:var(--faint)'>no card URI</span>"}</div>
+      <div class="owner">${short(owner)}</div>
+      <div class="rev">${n} review${n === 1 ? "" : "s"}</div>
+    </div>`;
+  el.onclick = () => showAgent(idNum, owner, uri, summary);
+  return el;
+}
+async function showAgent(idNum, owner, uri, summary) {
+  const box = document.getElementById("modalBox");
+  const n = Number(summary[0]), avg = Number(summary[2]);
+  box.innerHTML = `<h3>Agent #${idNum}</h3>
+    <div class="kv"><span>Owner</span><span>${owner}</span></div>
+    <div class="kv"><span>Card URI</span><span>${uri ? `<a href="${escapeHtml(uri)}" target="_blank" rel="noopener" style="color:var(--c2)">${escapeHtml(uri)}</a>` : "—"}</span></div>
+    <div class="kv"><span>Avg score</span><span>${avg}/100</span></div>
+    <div class="kv"><span>Reviews</span><span>${n}</span></div>
+    <div class="out" id="cardJson" style="display:none;"></div>
+    <div style="margin-top:18px; display:flex; gap:10px;">
+      <button class="primary" id="closeModal">Close</button>
+      ${uri && uri.startsWith("http") ? '<button id="fetchCard">Fetch agent card</button>' : ""}
+    </div>`;
+  document.getElementById("modalBg").classList.add("show");
+  document.getElementById("closeModal").onclick = () => document.getElementById("modalBg").classList.remove("show");
+  const fc = document.getElementById("fetchCard");
+  if (fc) fc.onclick = async () => {
+    const out = document.getElementById("cardJson"); out.style.display = "block"; out.textContent = "Loading…";
+    try { const r = await fetch(uri); out.textContent = await r.text(); }
+    catch (e) { out.textContent = "Could not fetch card: " + err(e); }
+  };
+}
+document.getElementById("modalBg").onclick = (e) => { if (e.target.id === "modalBg") e.currentTarget.classList.remove("show"); };
+
+// ---------- register ----------
+document.getElementById("regBtn").onclick = async () => {
+  if (!signer) return toast("Connect your wallet first", "bad");
+  if (!addrs.identity) return toast("Set the IdentityRegistry address first", "bad");
+  const uri = document.getElementById("regUri").value.trim();
+  if (!uri) return toast("Enter an agent card URI", "bad");
+  const out = document.getElementById("regOut"); out.style.display = "block"; out.textContent = "Sending transaction…";
+  try {
+    const id = new ethers.Contract(addrs.identity, IDENTITY_ABI, signer);
+    const tx = await id.register(uri);
+    out.textContent = "Pending: " + tx.hash;
+    await tx.wait();
+    out.textContent = "✓ Registered. Tx " + tx.hash;
+    toast("Agent registered!", "good");
+  } catch (e) { out.textContent = "✗ " + err(e); toast(err(e), "bad"); }
+};
+
+// ---------- reputation: authorize ----------
+document.getElementById("authBtn").onclick = async () => {
+  if (!signer) return toast("Connect your wallet first", "bad");
+  if (!addrs.reputation) return toast("Set the ReputationRegistry address first", "bad");
+  const agentId = document.getElementById("authAgentId").value.trim();
+  const client = document.getElementById("authClient").value.trim();
+  const ttl = Number(document.getElementById("authExpiry").value);
+  if (!agentId) return toast("Enter the agent ID", "bad");
+  if (!ethers.isAddress(client)) return toast("Invalid reviewer address", "bad");
+  if (account && client.toLowerCase() === account.toLowerCase())
+    return toast("You can't authorize yourself — self-feedback is rejected on-chain", "bad");
+  const out = document.getElementById("authOut"); out.style.display = "block"; out.textContent = "Awaiting signature…";
+  try {
+    const expiry = Math.floor(Date.now() / 1000) + ttl;
+    const nonce = ethers.hexlify(ethers.randomBytes(32));
+    const domain = { name: "ArcAgentReputation", version: "1", chainId: CHAIN_ID, verifyingContract: addrs.reputation };
+    const types = { FeedbackAuth: [
+      { name: "agentId", type: "uint256" },
+      { name: "client", type: "address" },
+      { name: "expiry", type: "uint64" },
+      { name: "nonce", type: "bytes32" },
+    ]};
+    const value = { agentId: BigInt(agentId), client, expiry, nonce };
+    const signature = await signer.signTypedData(domain, types, value);
+    const blob = JSON.stringify({ agentId: Number(agentId), client, expiry, nonce, signature }, null, 2);
+    out.textContent = blob;
+    toast("Signed — send this blob to the reviewer", "good");
+  } catch (e) { out.textContent = "✗ " + err(e); toast(err(e), "bad"); }
+};
+
+// ---------- reputation: submit ----------
+document.getElementById("subBtn").onclick = async () => {
+  if (!signer) return toast("Connect your wallet first", "bad");
+  if (!addrs.reputation) return toast("Set the ReputationRegistry address first", "bad");
+  const out = document.getElementById("subOut"); out.style.display = "block";
+  let auth;
+  try { auth = JSON.parse(document.getElementById("subBlob").value.trim()); }
+  catch { out.textContent = "✗ FeedbackAuth blob is not valid JSON"; return; }
+  const score = Number(document.getElementById("subScore").value);
+  if (score < 0 || score > 100) { out.textContent = "✗ Score must be 0–100"; return; }
+  if (account && auth.client && account.toLowerCase() !== auth.client.toLowerCase())
+    return toast("Warning: connected wallet ≠ the client in the auth", "bad");
+  const tagLabel = document.getElementById("subTag").value.trim();
+  const fileUri = document.getElementById("subFileUri").value.trim();
+  const tag = tagLabel ? ethers.encodeBytes32String(tagLabel.slice(0, 31)) : ethers.ZeroHash;
+  out.textContent = "Sending transaction…";
+  try {
+    const rep = new ethers.Contract(addrs.reputation, REPUTATION_ABI, signer);
+    const tx = await rep.giveFeedback(BigInt(auth.agentId), score, tag, fileUri, auth.expiry, auth.nonce, auth.signature);
+    out.textContent = "Pending: " + tx.hash;
+    await tx.wait();
+    out.textContent = "✓ Feedback recorded. Tx " + tx.hash;
+    toast("Feedback submitted!", "good");
+  } catch (e) { out.textContent = "✗ " + err(e); toast(err(e), "bad"); }
+};
+
+// ---------- helpers ----------
+function err(e) {
+  return (e?.shortMessage || e?.reason || e?.info?.error?.message || e?.message || String(e)).slice(0, 180);
+}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+// ---------- init ----------
+loadAddrs();
+loadDirectory();
+</script>
+</body>
+</html>
