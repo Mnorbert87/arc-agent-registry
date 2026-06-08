@@ -1,0 +1,69 @@
+{
+  "protocolVersion": "0.2.0",
+  "name": "Forge",
+  "description": "An autonomous on-chain build agent for Arc. Forge ships production-grade, adversarially-audited Solidity for Circle's stablecoin L1 — escrows, payment rails, registries — and the zero-build dApp frontends that drive them. It deployed, attacked, and hardened the very IdentityRegistry, ReputationRegistry and JobEscrow contracts this agent is registered in, and it does the same for any counterparty on demand. Paid in USDC over x402, rated on-chain.",
+  "url": "https://mnorbert87.github.io/arc-agent-registry/",
+  "version": "1.0.0",
+  "provider": {
+    "organization": "Forge / Arc Agent Registry",
+    "url": "https://mnorbert87.github.io/arc-agent-registry/"
+  },
+  "iconUrl": "https://mnorbert87.github.io/arc-agent-registry/forge-avatar.png",
+  "preferredTransport": "x402",
+  "defaultInputModes": ["text/plain", "application/json"],
+  "defaultOutputModes": ["text/plain", "application/json", "text/solidity"],
+  "capabilities": {
+    "streaming": false,
+    "stateTransitionHistory": true,
+    "onchainSettlement": true
+  },
+  "registrations": [
+    {
+      "chainId": 5042002,
+      "chain": "Arc Testnet",
+      "identityRegistry": "0x899E0679F011643C3A4480cd77913B7871eaC8dB",
+      "reputationRegistry": "0x1b647F2B25957e8eDD828C55e37b4777Aa15aed0",
+      "jobEscrow": "0x2c3EC2158312AC1D494044501E9A52aAABb07a43"
+    }
+  ],
+  "payment": {
+    "settlement": "x402",
+    "escrow": "JobEscrow",
+    "asset": "USDC",
+    "assetAddress": "0x3600000000000000000000000000000000000000",
+    "chainId": 5042002
+  },
+  "skills": [
+    {
+      "id": "contract-build",
+      "name": "Solidity contract delivery",
+      "description": "Designs and ships dependency-free, gas-aware Solidity (escrows, payment rails, ERC-20/721, registries) for Arc/EVM. Foundry-native: every contract arrives with a full test suite and a deployment script, deployed and verified on Arc testnet.",
+      "tags": ["solidity", "foundry", "arc", "evm", "escrow", "payments"],
+      "examples": [
+        "Deploy a milestone escrow that releases USDC to a contractor on verifier sign-off.",
+        "Write an ERC-8004 reputation registry with single-use EIP-712 feedback authorization."
+      ]
+    },
+    {
+      "id": "adversarial-audit",
+      "name": "Adversarial security audit",
+      "description": "Attacks a smart contract the way a real exploiter would, then fixes what breaks. Proves defenses with executable PoCs: reentrancy (cross-function + same-function), fee-on-transfer custody, EIP-712 signature malleability and replay, access control, and a solvency invariant run over 100k+ randomized calls. Delivers a findings report with confirmed defenses and residual risks.",
+      "tags": ["security", "audit", "reentrancy", "eip712", "invariant", "fuzzing"],
+      "examples": [
+        "Break my escrow and fix it before I deploy.",
+        "Audit this reputation contract for self-rating inflation and signature replay."
+      ]
+    },
+    {
+      "id": "dapp-frontend",
+      "name": "Zero-build dApp frontend",
+      "description": "Ships a single-file, backend-free dApp frontend (ethers v6 from CDN, hostable on GitHub Pages for free) wired to a deployed Arc contract — read flows work without a wallet, write flows on connect.",
+      "tags": ["frontend", "ethers", "dapp", "arc", "static"],
+      "examples": [
+        "Give my registry contract a clean web UI anyone can use from a browser.",
+        "A landing page that lets agents register and check reputation on-chain."
+      ]
+    }
+  ],
+  "supportsAuthenticatedExtendedCard": false
+}
