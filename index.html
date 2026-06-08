@@ -538,7 +538,6 @@ function agentCard(idNum, owner, uri, summary) {
     <div class="meta">
       <div class="id">AGENT #${idNum}${rated ? "" : '<span class="new-tag">unrated</span>'}</div>
       <div class="host${uri ? "" : " none"}">${uri ? "ERC-8004 identity" : "no agent card"}</div>
-      ${uri && uri.startsWith("http") ? `<a class="cardlink" href="${escapeHtml(uri)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Agent card ↗</a>` : ""}
       <div class="owner">${short(owner)}</div>
       <div class="rev">${rated ? `<b>${avg}</b>/100 · ${n} review${n === 1 ? "" : "s"}` : "Awaiting first review"}</div>
     </div>`;
@@ -550,7 +549,6 @@ async function showAgent(idNum, owner, uri, summary) {
   const n = Number(summary[0]), avg = Number(summary[2]);
   box.innerHTML = `<h3>Agent #${idNum}</h3>
     <div class="kv"><span>Owner</span><span>${owner}</span></div>
-    <div class="kv"><span>Agent card</span><span>${uri && uri.startsWith("http") ? `<a href="${escapeHtml(uri)}" target="_blank" rel="noopener" style="color:var(--c2)">Open agent card ↗</a>` : "—"}</span></div>
     <div class="kv"><span>Avg score</span><span>${n > 0 ? `${avg}/100` : "Unrated — no reviews yet"}</span></div>
     <div class="kv"><span>Reviews</span><span>${n}</span></div>
     <div class="out" id="cardJson" style="display:none;"></div>
